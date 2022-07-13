@@ -1,6 +1,10 @@
 import React, { Component } from 'react';
 
 class Clock extends Component {
+  centerX = 130
+  centerY = 130
+  radius = 120
+
   getCanvasContext () {
     const el = document.getElementById('clock-canvas')
     return el.getContext('2d')
@@ -9,33 +13,41 @@ class Clock extends Component {
   drawClock () {
     const ctx = this.getCanvasContext()
 
-    const centerX = 130
-    const centerY = 130
-    const radius = 120
-
-    ctx.arc(centerX, centerY, radius, 0, (2 * Math.PI))
+    ctx.beginPath()
+    ctx.arc(this.centerX, this.centerY, this.radius, 0, (2 * Math.PI))
+    ctx.stroke()
 
     for (let i = 0; i < 12; i++) {
       ctx.save()
+      ctx.beginPath()
 
-      ctx.translate(centerX, centerY)
+      ctx.translate(this.centerX, this.centerY)
       ctx.rotate(i * (2 * Math.PI / 12))
 
       const quarterPoints = [0, 3, 6, 9]
       const length = quarterPoints.includes(i) ? 30 : 15
-      ctx.moveTo(radius, 0)
-      ctx.lineTo(radius - length, 0)
+      ctx.moveTo(this.radius, 0)
+      ctx.lineTo(this.radius - length, 0)
 
+      ctx.stroke()
       ctx.restore()
     }
+  }
 
-    ctx.moveTo(centerX + radius, centerY)
+  spinClock () {
+    const ctx = this.getCanvasContext()
 
-    ctx.stroke()
+    ctx.clearRect(0, 0, 260, 260)
+    ctx.translate(this.centerX, this.centerY)
+    ctx.rotate(0.1 * Math.PI / 180)
+    ctx.translate(-this.centerX, -this.centerY)
+
+    this.drawClock()
+    window.requestAnimationFrame(() => this.spinClock())
   }
 
   componentDidMount () {
-    this.drawClock()
+    this.spinClock()
   }
 
   render() {
