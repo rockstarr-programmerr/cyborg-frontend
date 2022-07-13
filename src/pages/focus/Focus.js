@@ -1,6 +1,7 @@
 import React from "react";
 import ActivityType from './_ActivityType.js';
 import ActivityName from './_ActivityName.js';
+import Clock from './_Clock.js';
 import {
   Container,
   Box,
@@ -10,8 +11,12 @@ import {
 export default class Focus extends React.Component {
   render () {
     return (
-      <Container>
+      <Container maxWidth="sm">
         <form>
+          <Box sx={{ mb: 2, mt: 2 }}>
+            <Clock />
+          </Box>
+
           <Box sx={{ mb: 2 }}>
             <ActivityType />
           </Box>
