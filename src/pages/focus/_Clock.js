@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import styles from './_Clock.module.scss'
 
 class Clock extends Component {
   centerX = 130
@@ -9,12 +10,14 @@ class Clock extends Component {
     super(props)
 
     this.state = {
-      angleRotated: 0,
       isMouseDown: false,
       time: {
         minutes: 0,
         seconds: 0
-      }
+      },
+      fromAngle: 0,
+      toAngle: 0,
+      angleRotated: 0
     }
 
     this.canvasRef = React.createRef()
@@ -25,39 +28,66 @@ class Clock extends Component {
     this.handleMouseMove = this.handleMouseMove.bind(this)
   }
 
-  handleMouseDown () {
-    this.setState({ isMouseDown: true })
+  handleMouseDown (e) {
+    const currentAngle = this.calculateAngleFromCordinate(e.clientX, e.clientY)
+    this.setState({
+      isMouseDown: true,
+      fromAngle: currentAngle,
+      toAngle: currentAngle
+    })
   }
 
   handleMouseUp () {
-    this.setState({ isMouseDown: false })
+    this.endSpin()
   }
 
   handleMouseLeave () {
-    this.setState({ isMouseDown: false })
+    this.endSpin()
   }
 
   handleMouseMove (e) {
     if (!this.state.isMouseDown) return
 
-    const mouseX = e.clientX
-    const mouseY = e.clientY
-    const rect = this.canvasRef.current.getBoundingClientRect()
-    const canvasCenterX = rect.left + this.centerX
-    const canvasCenterY = rect.top + this.centerY
+    this.setState({
+      toAngle: this.calculateAngleFromCordinate(e.clientX, e.clientY)
+    })
 
-    const angle = Math.atan(
-      (mouseY - canvasCenterY) /
-      (mouseX - canvasCenterX)
-    )
+    this.spinClock()
+  }
 
-    this.spinClock(angle)
+  endSpin () {
+    this.setState({
+      isMouseDown: false,
+      fromAngle: 0,
+      toAngle: 0,
+      angleRotated: 0
+    })
   }
 
   formatTime () {
     const minutes = this.state.time.minutes.toString().padStart(2, '0')
     const seconds = this.state.time.seconds.toString().padStart(2, '0')
     return `${minutes}:${seconds}`
+  }
+
+  calculateAngleFromCordinate (x, y) {
+    const rect = this.canvasRef.current.getBoundingClientRect()
+    const canvasCenterX = rect.left + this.centerX
+    const canvasCenterY = rect.top + this.centerY
+
+    const atan = Math.atan(
+      (y - canvasCenterY) /
+      (x - canvasCenterX)
+    )
+
+    let angle = atan
+    if (x < canvasCenterX) {
+      angle = Math.PI + atan
+    } else if (x >= canvasCenterX && y < canvasCenterY) {
+      angle = (2 * Math.PI) + atan
+    }
+
+    return angle
   }
 
   getCanvasContext () {
@@ -103,14 +133,44 @@ class Clock extends Component {
     ctx.restore()
   }
 
-  spinClock (targetAngle) {
-    const ctx = this.getCanvasContext()
+  /**
+   * Check if the spinning direction is clockwise or counter-clockwise
+   */
+  checkClockWise (fromAngle, toAngle) {
+    const oppositeAngle = (fromAngle + Math.PI) % (2 * Math.PI)
+    let clockWise
+    if (oppositeAngle > fromAngle) {
+      clockWise = toAngle > fromAngle && toAngle < oppositeAngle
+    } else {
+      clockWise = !(toAngle < fromAngle && toAngle > oppositeAngle)
+    }
+    return clockWise
+  }
 
-    const angleToRotate = 0.1 * Math.PI / 180
+  spinClock () {
+    const minimumSpinAngle = 1 * Math.PI / 180
+    const rotateBy = 0.05 * Math.PI / 180
+    const toAngle = this.state.toAngle
+    const fromAngle = this.state.fromAngle
+
+    if (Math.abs(toAngle - fromAngle) <= minimumSpinAngle) return
+
+    const crossedFullCircle = Math.abs(toAngle - fromAngle) > Math.PI
+
+    const clockWise = this.checkClockWise(fromAngle, toAngle)
+
+    if (crossedFullCircle && clockWise) {
+      this.setState({ fromAngle: 0 })
+    } else if (crossedFullCircle && !clockWise) {
+      this.setState({ fromAngle: 2 * Math.PI })
+    }
+
     this.setState(state => ({
-      angleRotated: state.angleRotated + angleToRotate
+      fromAngle: clockWise ? state.fromAngle + rotateBy : state.fromAngle - rotateBy,
+      angleRotated: clockWise ? state.angleRotated + rotateBy : state.angleRotated - rotateBy
     }))
 
+    const ctx = this.getCanvasContext()
     ctx.save()
     ctx.clearRect(0, 0, 260, 260)
     ctx.translate(this.centerX, this.centerY)
@@ -121,16 +181,17 @@ class Clock extends Component {
 
     this.drawTime()
 
-    if (this.state.angleRotated < targetAngle) {
-      window.requestAnimationFrame(() => this.spinClock(targetAngle))
+    if (
+      (clockWise && this.state.fromAngle < this.state.toAngle) ||
+      (!clockWise && this.state.fromAngle > this.state.toAngle)
+    ) {
+      window.requestAnimationFrame(() => this.spinClock())
     }
   }
 
   componentDidMount () {
-      this.drawClock()
-      document.fonts.load('40px Roboto').then(() => {
-      this.drawTime()
-    })
+    this.drawClock()
+    document.fonts.load('40px Roboto').then(() => this.drawTime())
   }
 
   render() {
@@ -139,6 +200,7 @@ class Clock extends Component {
         <canvas
           ref={this.canvasRef}
           id="clock-canvas"
+          className={styles['clock-canvas']}
           width="260px"
           height="260px"
           onMouseDown={this.handleMouseDown}
