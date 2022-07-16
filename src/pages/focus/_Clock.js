@@ -5,6 +5,51 @@ class Clock extends Component {
   centerY = 130
   radius = 120
 
+  constructor (props) {
+    super(props)
+
+    this.state = {
+      currentAngle: 0,
+      isMouseDown: false
+    }
+
+    this.canvasRef = React.createRef()
+
+    this.handleMouseDown = this.handleMouseDown.bind(this)
+    this.handleMouseUp = this.handleMouseUp.bind(this)
+    this.handleMouseLeave = this.handleMouseLeave.bind(this)
+    this.handleMouseMove = this.handleMouseMove.bind(this)
+  }
+
+  handleMouseDown () {
+    this.setState({ isMouseDown: true })
+  }
+
+  handleMouseUp () {
+    this.setState({ isMouseDown: false })
+  }
+
+  handleMouseLeave () {
+    this.setState({ isMouseDown: false })
+  }
+
+  handleMouseMove (e) {
+    if (!this.state.isMouseDown) return
+
+    const mouseX = e.clientX
+    const mouseY = e.clientY
+    const rect = this.canvasRef.current.getBoundingClientRect()
+    const canvasCenterX = rect.left + this.centerX
+    const canvasCenterY = rect.top + this.centerY
+
+    const angle = Math.atan(
+      (mouseY - canvasCenterY) /
+      (mouseX - canvasCenterX)
+    )
+
+    this.spinClock(angle)
+  }
+
   getCanvasContext () {
     const el = document.getElementById('clock-canvas')
     return el.getContext('2d')
@@ -34,26 +79,44 @@ class Clock extends Component {
     }
   }
 
-  spinClock () {
+  spinClock (targetAngle) {
     const ctx = this.getCanvasContext()
+
+    const angleToRotate = 0.1 * Math.PI / 180
 
     ctx.clearRect(0, 0, 260, 260)
     ctx.translate(this.centerX, this.centerY)
-    ctx.rotate(0.1 * Math.PI / 180)
+    ctx.rotate(angleToRotate)
     ctx.translate(-this.centerX, -this.centerY)
 
     this.drawClock()
-    window.requestAnimationFrame(() => this.spinClock())
+
+    this.setState(state => ({
+      currentAngle: state.currentAngle + angleToRotate
+    }))
+
+    if (this.state.currentAngle < targetAngle) {
+      window.requestAnimationFrame(() => this.spinClock(targetAngle))
+    }
   }
 
   componentDidMount () {
-    this.spinClock()
+    this.drawClock()
   }
 
   render() {
     return (
       <div>
-        <canvas id="clock-canvas" width="260px" height="260px"></canvas>
+        <canvas
+          ref={this.canvasRef}
+          id="clock-canvas"
+          width="260px"
+          height="260px"
+          onMouseDown={this.handleMouseDown}
+          onMouseLeave={this.handleMouseLeave}
+          onMouseUp={this.handleMouseUp}
+          onMouseMove={this.handleMouseMove}
+        ></canvas>
       </div>
     );
   }
