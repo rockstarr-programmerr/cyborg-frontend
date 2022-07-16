@@ -9,8 +9,12 @@ class Clock extends Component {
     super(props)
 
     this.state = {
-      currentAngle: 0,
-      isMouseDown: false
+      angleRotated: 0,
+      isMouseDown: false,
+      time: {
+        minutes: 0,
+        seconds: 0
+      }
     }
 
     this.canvasRef = React.createRef()
@@ -50,6 +54,12 @@ class Clock extends Component {
     this.spinClock(angle)
   }
 
+  formatTime () {
+    const minutes = this.state.time.minutes.toString().padStart(2, '0')
+    const seconds = this.state.time.seconds.toString().padStart(2, '0')
+    return `${minutes}:${seconds}`
+  }
+
   getCanvasContext () {
     const el = document.getElementById('clock-canvas')
     return el.getContext('2d')
@@ -62,46 +72,65 @@ class Clock extends Component {
     ctx.arc(this.centerX, this.centerY, this.radius, 0, (2 * Math.PI))
     ctx.stroke()
 
-    for (let i = 0; i < 12; i++) {
+    const lineLength = 8
+
+    for (let i = 0; i < 60; i++) {
       ctx.save()
       ctx.beginPath()
 
       ctx.translate(this.centerX, this.centerY)
-      ctx.rotate(i * (2 * Math.PI / 12))
+      ctx.rotate(i * (2 * Math.PI / 60))
 
-      const quarterPoints = [0, 3, 6, 9]
-      const length = quarterPoints.includes(i) ? 30 : 15
       ctx.moveTo(this.radius, 0)
-      ctx.lineTo(this.radius - length, 0)
+      ctx.lineTo(this.radius - lineLength, 0)
 
       ctx.stroke()
       ctx.restore()
     }
+
+    ctx.beginPath()
+    ctx.arc(this.centerX, this.centerY, this.radius - lineLength, 0, (2 * Math.PI))
+    ctx.stroke()
+  }
+
+  drawTime () {
+    const ctx = this.getCanvasContext()
+    ctx.save()
+    ctx.font = '40px Roboto'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(this.formatTime(), this.centerX, this.centerY)
+    ctx.restore()
   }
 
   spinClock (targetAngle) {
     const ctx = this.getCanvasContext()
 
     const angleToRotate = 0.1 * Math.PI / 180
-
-    ctx.clearRect(0, 0, 260, 260)
-    ctx.translate(this.centerX, this.centerY)
-    ctx.rotate(angleToRotate)
-    ctx.translate(-this.centerX, -this.centerY)
-
-    this.drawClock()
-
     this.setState(state => ({
-      currentAngle: state.currentAngle + angleToRotate
+      angleRotated: state.angleRotated + angleToRotate
     }))
 
-    if (this.state.currentAngle < targetAngle) {
+    ctx.save()
+    ctx.clearRect(0, 0, 260, 260)
+    ctx.translate(this.centerX, this.centerY)
+    ctx.rotate(this.state.angleRotated)
+    ctx.translate(-this.centerX, -this.centerY)
+    this.drawClock()
+    ctx.restore()
+
+    this.drawTime()
+
+    if (this.state.angleRotated < targetAngle) {
       window.requestAnimationFrame(() => this.spinClock(targetAngle))
     }
   }
 
   componentDidMount () {
-    this.drawClock()
+      this.drawClock()
+      document.fonts.load('40px Roboto').then(() => {
+      this.drawTime()
+    })
   }
 
   render() {
