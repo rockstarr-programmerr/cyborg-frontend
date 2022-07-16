@@ -59,8 +59,7 @@ class Clock extends Component {
     this.setState({
       isMouseDown: false,
       fromAngle: 0,
-      toAngle: 0,
-      angleRotated: 0
+      toAngle: 0
     })
   }
 
@@ -102,14 +101,15 @@ class Clock extends Component {
     ctx.arc(this.centerX, this.centerY, this.radius, 0, (2 * Math.PI))
     ctx.stroke()
 
-    const lineLength = 8
+    const lineLength = 10
+    const lineCount = 4
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < lineCount; i++) {
       ctx.save()
       ctx.beginPath()
 
       ctx.translate(this.centerX, this.centerY)
-      ctx.rotate(i * (2 * Math.PI / 60))
+      ctx.rotate(i * (2 * Math.PI / lineCount))
 
       ctx.moveTo(this.radius, 0)
       ctx.lineTo(this.radius - lineLength, 0)
@@ -149,7 +149,7 @@ class Clock extends Component {
 
   spinClock () {
     const minimumSpinAngle = 1 * Math.PI / 180
-    const rotateBy = 0.05 * Math.PI / 180
+    const rotateBy = 0.04 * Math.PI / 180
     const toAngle = this.state.toAngle
     const fromAngle = this.state.fromAngle
 
